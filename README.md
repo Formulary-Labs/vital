@@ -1,6 +1,6 @@
 # vital
 
-Program health snapshot for compliance programs.
+Four readings — coverage, risks, evidence, decisions. One overall status. `vital` computes; `exhibit` renders. Red means something needs attention before the next cycle.
 
 ```bash
 go get github.com/Formulary-Labs/vital
@@ -9,8 +9,6 @@ go get github.com/Formulary-Labs/vital
 ## What it does
 
 `vital` reads a program run state JSON and computes a `Snapshot` with traffic-light ratings across four health dimensions: coverage, risks, evidence, and decisions. `OverallStatus` is the worst status across all four dimensions.
-
-`vital` is the data layer — it computes; it does not render. Rendering is handled by `exhibit` (HTML dashboard) or the agent layer (regimen daily brief).
 
 ## Usage
 
