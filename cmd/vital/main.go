@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -36,9 +37,32 @@ func main() {
 	}
 
 	if *runStateFlag == "" {
-		fmt.Fprintln(os.Stderr, `{"error": "--run-state is required", "code": 2}`)
-		flag.Usage()
-		os.Exit(exit.ToolError)
+		// Check if data is available on stdin (pipeline usage: decay ... | vital).
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			data, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, `{"error": "reading stdin: %v", "code": 2}`+"\n", err)
+				os.Exit(exit.ToolError)
+			}
+			// Write to a temp file so health.Load can parse it.
+			tmp, err := os.CreateTemp("", "vital-stdin-*.json")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, `{"error": "creating temp file: %v", "code": 2}`+"\n", err)
+				os.Exit(exit.ToolError)
+			}
+			defer os.Remove(tmp.Name()) //nolint:errcheck
+			if _, err := tmp.Write(data); err != nil {
+				fmt.Fprintf(os.Stderr, `{"error": "writing temp file: %v", "code": 2}`+"\n", err)
+				os.Exit(exit.ToolError)
+			}
+			tmp.Close() //nolint:errcheck
+			*runStateFlag = tmp.Name()
+		} else {
+			fmt.Fprintln(os.Stderr, `{"error": "--run-state is required (or pipe JSON via stdin)", "code": 2}`)
+			flag.Usage()
+			os.Exit(exit.ToolError)
+		}
 	}
 
 	rs, err := health.Load(*runStateFlag)
@@ -66,24 +90,28 @@ func main() {
 	}
 
 	if rs.Program != "" {
-		_ = provenance.Write("logs/provenance.jsonl", provenance.Entry{
-			Spec:        "functions/program-dashboard-spec.md",
-			Output:      *runStateFlag,
-			OutputType:  "other",
-			Program:     rs.Program,
-			Purpose:     fmt.Sprintf("vital: health snapshot for %s (overall: %s)", rs.Program, snapshot.OverallStatus),
-			Reusability: provenance.Instance,
-			QualityGate: provenance.Pass,
-			Tool:        "vital",
-			ToolVersion: version,
-		})
+		if !*quietFlag {
+			_ = provenance.Write("logs/provenance.jsonl", provenance.Entry{
+				Spec:        "functions/program-dashboard-spec.md",
+				Output:      *runStateFlag,
+				OutputType:  "other",
+				Program:     rs.Program,
+				Purpose:     fmt.Sprintf("vital: health snapshot for %s (overall: %s)", rs.Program, snapshot.OverallStatus),
+				Reusability: provenance.Instance,
+				QualityGate: provenance.Pass,
+				Tool:        "vital",
+				ToolVersion: version,
+			})
+		}
 	}
 }
 
 func printMD(s health.Snapshot, quiet bool) {
 	sb := &strings.Builder{}
 	fmt.Fprintf(sb, "# Program Health: %s\n\n", s.Program)
-	fmt.Fprintf(sb, "**Generated:** %s  \n", s.GeneratedAt.Format("2006-01-02 15:04 UTC"))
+	if !quiet {
+		fmt.Fprintf(sb, "**Generated:** %s  \n", s.GeneratedAt.Format("2006-01-02 15:04 UTC"))
+	}
 	fmt.Fprintf(sb, "**Overall:** %s\n\n", statusEmoji(s.OverallStatus))
 
 	fmt.Fprintf(sb, "## Coverage — %s\n\n", statusEmoji(s.Coverage.Status))
@@ -131,7 +159,6 @@ func printMD(s health.Snapshot, quiet bool) {
 		fmt.Fprintln(sb)
 	}
 
-	_ = quiet
 	fmt.Print(sb.String())
 }
 
