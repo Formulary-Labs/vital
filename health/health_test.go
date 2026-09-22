@@ -90,7 +90,7 @@ func TestLoad(t *testing.T) {
 	data, _ := json.Marshal(rs)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "latest.json")
-	_ = os.WriteFile(path, data, 0o600) //nolint:gosec // test temp file
+	_ = os.WriteFile(path, data, 0o600)
 
 	loaded, err := health.Load(path)
 	if err != nil {
