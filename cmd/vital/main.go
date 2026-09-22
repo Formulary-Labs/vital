@@ -13,9 +13,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Formulary-Labs/vital/health"
 	"github.com/Formulary-Labs/substrate/exit"
 	"github.com/Formulary-Labs/substrate/provenance"
+	"github.com/Formulary-Labs/vital/health"
 )
 
 const version = "0.1.0"

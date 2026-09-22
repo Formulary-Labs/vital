@@ -21,6 +21,7 @@ import (
 // Status is a traffic-light health rating.
 type Status string
 
+//nolint:revive // Status constants are self-documenting.
 const (
 	StatusGreen  Status = "green"
 	StatusYellow Status = "yellow"
@@ -30,15 +31,15 @@ const (
 
 // Snapshot is the full program health snapshot produced by vital.
 type Snapshot struct {
-	Program       string           `json:"program"`
-	GeneratedAt   time.Time        `json:"generated_at"`
-	OverallStatus Status           `json:"overall_status"`
-	Coverage      CoverageHealth   `json:"coverage"`
-	Risks         RiskHealth       `json:"risks"`
-	Evidence      EvidenceHealth   `json:"evidence"`
-	Decisions     DecisionHealth   `json:"decisions"`
-	Blockers      []string         `json:"blockers,omitempty"`
-	Flags         []string         `json:"flags,omitempty"`
+	Program       string         `json:"program"`
+	GeneratedAt   time.Time      `json:"generated_at"`
+	OverallStatus Status         `json:"overall_status"`
+	Coverage      CoverageHealth `json:"coverage"`
+	Risks         RiskHealth     `json:"risks"`
+	Evidence      EvidenceHealth `json:"evidence"`
+	Decisions     DecisionHealth `json:"decisions"`
+	Blockers      []string       `json:"blockers,omitempty"`
+	Flags         []string       `json:"flags,omitempty"`
 }
 
 // CoverageHealth summarizes control coverage status.
@@ -64,12 +65,12 @@ type RiskHealth struct {
 
 // EvidenceHealth summarizes evidence currency.
 type EvidenceHealth struct {
-	OverdueCount   int      `json:"overdue_count"`
-	DueSoonCount   int      `json:"due_soon_count"` // within 30 days
-	LastRunDate    *time.Time `json:"last_run_date,omitempty"`
-	DaysSinceRun   *int     `json:"days_since_run,omitempty"`
-	IsStale        bool     `json:"is_stale"` // past recommended_next_run
-	Status         Status   `json:"status"`
+	OverdueCount int        `json:"overdue_count"`
+	DueSoonCount int        `json:"due_soon_count"` // within 30 days
+	LastRunDate  *time.Time `json:"last_run_date,omitempty"`
+	DaysSinceRun *int       `json:"days_since_run,omitempty"`
+	IsStale      bool       `json:"is_stale"` // past recommended_next_run
+	Status       Status     `json:"status"`
 }
 
 // DecisionHealth summarizes pending decisions and blockers.
@@ -118,10 +119,10 @@ type CoverageBlock struct {
 	EvidenceGapCount int     `json:"evidence_gap_count,omitempty"`
 
 	// Schema 1.1 fields (legacy).
-	Total    int     `json:"total,omitempty"`
-	Evidenced int    `json:"evidenced,omitempty"`
-	Implemented int  `json:"implemented,omitempty"`
-	Gaps     int     `json:"gaps,omitempty"`
+	Total       int `json:"total,omitempty"`
+	Evidenced   int `json:"evidenced,omitempty"`
+	Implemented int `json:"implemented,omitempty"`
+	Gaps        int `json:"gaps,omitempty"`
 }
 
 // RiskEntry is a minimal risk record from the run state.

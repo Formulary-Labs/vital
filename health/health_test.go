@@ -14,10 +14,10 @@ func TestCompute_greenProgram(t *testing.T) {
 	rs := &health.RunState{
 		Program: "test",
 		Coverage: &health.CoverageBlock{
-			TotalControls: 100,
-			EvidencedPct:  85,
+			TotalControls:  100,
+			EvidencedPct:   85,
 			ImplementedPct: 10,
-			GapPct:        5,
+			GapPct:         5,
 		},
 	}
 	s := health.Compute(rs)
@@ -84,13 +84,13 @@ func TestCompute_greyCoverage(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	rs := &health.RunState{
-		Program: "test",
+		Program:  "test",
 		Coverage: &health.CoverageBlock{TotalControls: 50, EvidencedPct: 70},
 	}
 	data, _ := json.Marshal(rs)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "latest.json")
-	os.WriteFile(path, data, 0o644)
+	_ = os.WriteFile(path, data, 0o600) //nolint:gosec // test temp file
 
 	loaded, err := health.Load(path)
 	if err != nil {
