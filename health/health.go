@@ -84,6 +84,7 @@ type DecisionHealth struct {
 // RFC 3339 ("2026-01-15T00:00:00Z") and date-only ("2026-01-15") formats.
 type FlexTime time.Time
 
+// UnmarshalJSON implements json.Unmarshaler. It accepts RFC 3339 and YYYY-MM-DD.
 func (ft *FlexTime) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -98,6 +99,7 @@ func (ft *FlexTime) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("cannot parse time %q: expected RFC3339 or YYYY-MM-DD", s)
 }
 
+// Time returns the underlying time.Time value.
 func (ft FlexTime) Time() time.Time { return time.Time(ft) }
 
 // RunState is the minimal subset of a program run JSON that vital reads.
