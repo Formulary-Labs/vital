@@ -80,33 +80,33 @@ type DecisionHealth struct {
 	Status        Status `json:"status"`
 }
 
-// flexTime is a time.Time wrapper whose JSON unmarshaler accepts both
+// FlexTime is a time.Time wrapper whose JSON unmarshaler accepts both
 // RFC 3339 ("2026-01-15T00:00:00Z") and date-only ("2026-01-15") formats.
-type flexTime time.Time
+type FlexTime time.Time
 
-func (ft *flexTime) UnmarshalJSON(data []byte) error {
+func (ft *FlexTime) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
 		if t, err := time.Parse(layout, s); err == nil {
-			*ft = flexTime(t)
+			*ft = FlexTime(t)
 			return nil
 		}
 	}
 	return fmt.Errorf("cannot parse time %q: expected RFC3339 or YYYY-MM-DD", s)
 }
 
-func (ft flexTime) Time() time.Time { return time.Time(ft) }
+func (ft FlexTime) Time() time.Time { return time.Time(ft) }
 
 // RunState is the minimal subset of a program run JSON that vital reads.
 // The full run JSON schema is defined by the prompt-repo agent layer and
 // is not reproduced here — vital reads only what it needs.
 type RunState struct {
 	Program   string    `json:"program"`
-	UpdatedAt *flexTime `json:"updated_at,omitempty"`
-	RunDate   *flexTime `json:"run_date,omitempty"`
+	UpdatedAt *FlexTime `json:"updated_at,omitempty"`
+	RunDate   *FlexTime `json:"run_date,omitempty"`
 
 	// Coverage — both schema variants (1.1 legacy and 2.0 standard).
 	Coverage *CoverageBlock `json:"coverage,omitempty"`
@@ -125,7 +125,7 @@ type RunState struct {
 	} `json:"decisions,omitempty"`
 
 	// Metadata.
-	RecommendedNextRun *flexTime `json:"recommended_next_run,omitempty"`
+	RecommendedNextRun *FlexTime `json:"recommended_next_run,omitempty"`
 }
 
 // CoverageBlock handles both schema 1.1 and 2.0 coverage shapes.

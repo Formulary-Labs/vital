@@ -60,7 +60,7 @@ func TestCompute_criticalRisk(t *testing.T) {
 }
 
 func TestCompute_staleEvidence(t *testing.T) {
-	stale := time.Now().Add(-100 * 24 * time.Hour)
+	stale := health.FlexTime(time.Now().Add(-100 * 24 * time.Hour))
 	rs := &health.RunState{
 		Program: "test",
 		RunDate: &stale,
