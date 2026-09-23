@@ -80,13 +80,33 @@ type DecisionHealth struct {
 	Status        Status `json:"status"`
 }
 
+// flexTime is a time.Time wrapper whose JSON unmarshaler accepts both
+// RFC 3339 ("2026-01-15T00:00:00Z") and date-only ("2026-01-15") formats.
+type flexTime time.Time
+
+func (ft *flexTime) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			*ft = flexTime(t)
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot parse time %q: expected RFC3339 or YYYY-MM-DD", s)
+}
+
+func (ft flexTime) Time() time.Time { return time.Time(ft) }
+
 // RunState is the minimal subset of a program run JSON that vital reads.
 // The full run JSON schema is defined by the prompt-repo agent layer and
 // is not reproduced here — vital reads only what it needs.
 type RunState struct {
-	Program   string     `json:"program"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
-	RunDate   *time.Time `json:"run_date,omitempty"`
+	Program   string    `json:"program"`
+	UpdatedAt *flexTime `json:"updated_at,omitempty"`
+	RunDate   *flexTime `json:"run_date,omitempty"`
 
 	// Coverage — both schema variants (1.1 legacy and 2.0 standard).
 	Coverage *CoverageBlock `json:"coverage,omitempty"`
@@ -105,7 +125,7 @@ type RunState struct {
 	} `json:"decisions,omitempty"`
 
 	// Metadata.
-	RecommendedNextRun *time.Time `json:"recommended_next_run,omitempty"`
+	RecommendedNextRun *flexTime `json:"recommended_next_run,omitempty"`
 }
 
 // CoverageBlock handles both schema 1.1 and 2.0 coverage shapes.
@@ -243,10 +263,11 @@ func computeEvidence(rs *RunState, now time.Time) EvidenceHealth {
 		runDate = rs.UpdatedAt
 	}
 	if runDate != nil {
-		eh.LastRunDate = runDate
-		days := int(now.Sub(*runDate).Hours() / 24)
+		t := runDate.Time()
+		eh.LastRunDate = &t
+		days := int(now.Sub(t).Hours() / 24)
 		eh.DaysSinceRun = &days
-		if rs.RecommendedNextRun != nil && now.After(*rs.RecommendedNextRun) {
+		if rs.RecommendedNextRun != nil && now.After(rs.RecommendedNextRun.Time()) {
 			eh.IsStale = true
 		} else if days > 90 {
 			eh.IsStale = true
