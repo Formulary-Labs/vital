@@ -100,3 +100,39 @@ func TestLoad(t *testing.T) {
 		t.Errorf("program = %q, want %q", loaded.Program, "test")
 	}
 }
+
+func TestLoad_liveControlCoverageAndRiskRegister(t *testing.T) {
+	path := filepath.Join("..", "testdata", "live-shape.json")
+	if _, err := os.Stat(path); err != nil {
+		path = filepath.Join("testdata", "live-shape.json")
+	}
+	loaded, err := health.Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.Program != "iso42001" {
+		t.Errorf("program = %q", loaded.Program)
+	}
+	if loaded.Coverage == nil || loaded.Coverage.TotalControls != 68 {
+		t.Fatalf("coverage = %+v, want TotalControls=68", loaded.Coverage)
+	}
+	if loaded.Coverage.EvidencedPct != 22 {
+		t.Errorf("evidenced_pct = %v, want 22", loaded.Coverage.EvidencedPct)
+	}
+	if loaded.Coverage.OwnerGapCount != 2 || loaded.Coverage.EvidenceGapCount != 1 {
+		t.Errorf("gaps owner=%d evidence=%d", loaded.Coverage.OwnerGapCount, loaded.Coverage.EvidenceGapCount)
+	}
+	if len(loaded.Risks) != 3 {
+		t.Fatalf("risks len = %d, want 3", len(loaded.Risks))
+	}
+	s := health.Compute(loaded)
+	if s.Coverage.Status == health.StatusGrey {
+		t.Error("coverage should not be grey with control_coverage data")
+	}
+	if s.Risks.Status == health.StatusGrey {
+		t.Error("risks should not be grey with risk_register.items")
+	}
+	if s.Risks.Critical != 1 || s.Risks.High != 1 || s.Risks.Open != 2 {
+		t.Errorf("risks summary = %+v", s.Risks)
+	}
+}
