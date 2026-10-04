@@ -1,0 +1,24 @@
+{
+  "program_slug": "iso42001",
+  "run_date": "2026-07-22T00:00:00Z",
+  "control_coverage": {
+    "coverage_pct": 22,
+    "totals": {
+      "total": 68,
+      "evidenced": 0,
+      "implemented_no_evidence": 15,
+      "gap": 53,
+      "not_applicable": 0
+    },
+    "coverage_gaps": [{"id": "g1"}, {"id": "g2"}],
+    "evidence_gaps": [{"id": "e1"}],
+    "owner_gaps": [{"id": "o1"}, {"id": "o2"}]
+  },
+  "risk_register": {
+    "items": [
+      {"id": "RISK-001", "title": "Auditor", "severity": "high", "status": "open"},
+      {"id": "RISK-002", "title": "Evidence", "severity": "critical", "status": "open"},
+      {"id": "RISK-003", "title": "Done", "severity": "medium", "status": "mitigated"}
+    ]
+  }
+}
