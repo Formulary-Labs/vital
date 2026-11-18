@@ -159,16 +159,104 @@ type EvidenceWindow struct {
 }
 
 // Load reads a run state JSON from disk.
+// Accepts both legacy shapes (top-level coverage / risks) and live portfolio
+// shapes (control_coverage + risk_register.items).
 func Load(path string) (*RunState, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading run state %q: %w", path, err)
 	}
-	var rs RunState
-	if err := json.Unmarshal(data, &rs); err != nil {
+	rs, err := parseRunState(data)
+	if err != nil {
 		return nil, fmt.Errorf("parsing run state %q: %w", path, err)
 	}
-	return &rs, nil
+	return rs, nil
+}
+
+func parseRunState(data []byte) (*RunState, error) {
+	var raw struct {
+		Program            string           `json:"program"`
+		ProgramSlug        string           `json:"program_slug"`
+		UpdatedAt          *time.Time       `json:"updated_at"`
+		RunDate            *time.Time       `json:"run_date"`
+		Coverage           *CoverageBlock   `json:"coverage"`
+		Risks              []RiskEntry      `json:"risks"`
+		EvidenceWindows    []EvidenceWindow `json:"evidence_windows"`
+		Blockers           []string         `json:"blockers"`
+		RecommendedNextRun *time.Time       `json:"recommended_next_run"`
+		Decisions          []struct {
+			Deferred bool   `json:"deferred,omitempty"`
+			Text     string `json:"text,omitempty"`
+		} `json:"decisions"`
+		ControlCoverage *struct {
+			CoveragePct  float64 `json:"coverage_pct"`
+			Totals       *struct {
+				Total                 int `json:"total"`
+				Evidenced             int `json:"evidenced"`
+				ImplementedNoEvidence int `json:"implemented_no_evidence"`
+				Gap                   int `json:"gap"`
+			} `json:"totals"`
+			CoverageGaps []json.RawMessage `json:"coverage_gaps"`
+			EvidenceGaps []json.RawMessage `json:"evidence_gaps"`
+			OwnerGaps    []json.RawMessage `json:"owner_gaps"`
+		} `json:"control_coverage"`
+		RiskRegister *struct {
+			Items []RiskEntry `json:"items"`
+		} `json:"risk_register"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	rs := &RunState{
+		Program:            firstNonEmpty(raw.Program, raw.ProgramSlug),
+		UpdatedAt:          raw.UpdatedAt,
+		RunDate:            raw.RunDate,
+		Coverage:           raw.Coverage,
+		Risks:              raw.Risks,
+		EvidenceWindows:    raw.EvidenceWindows,
+		Blockers:           raw.Blockers,
+		Decisions:          raw.Decisions,
+		RecommendedNextRun: raw.RecommendedNextRun,
+	}
+
+	if rs.Coverage == nil && raw.ControlCoverage != nil {
+		cc := raw.ControlCoverage
+		block := &CoverageBlock{
+			EvidencedPct:     cc.CoveragePct,
+			OwnerGapCount:    len(cc.OwnerGaps),
+			EvidenceGapCount: len(cc.EvidenceGaps),
+		}
+		if cc.Totals != nil {
+			block.TotalControls = cc.Totals.Total
+			block.Total = cc.Totals.Total
+			block.Evidenced = cc.Totals.Evidenced
+			block.Implemented = cc.Totals.ImplementedNoEvidence
+			block.Gaps = cc.Totals.Gap
+			if block.TotalControls > 0 {
+				if block.EvidencedPct == 0 && cc.Totals.Evidenced > 0 {
+					block.EvidencedPct = pct(cc.Totals.Evidenced, cc.Totals.Total)
+				}
+				block.ImplementedPct = pct(cc.Totals.ImplementedNoEvidence, cc.Totals.Total)
+				block.GapPct = pct(cc.Totals.Gap, cc.Totals.Total)
+			}
+		}
+		rs.Coverage = block
+	}
+
+	if len(rs.Risks) == 0 && raw.RiskRegister != nil {
+		rs.Risks = raw.RiskRegister.Items
+	}
+	return rs, nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // Compute builds a Snapshot from the run state.
